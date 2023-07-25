@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import com.example.codigotest2.data.local.MovieDatabase
+import com.example.codigotest2.data.remote.ApiService
+import com.example.codigotest2.data.repository.Repository
 import com.example.codigotest2.util.Constants
 import dagger.Module
 import dagger.Provides
@@ -19,8 +21,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule{
 
+    @Singleton
     @Provides
     fun provideBaseUrl() = Constants.BASE_URL
+
 
     @Singleton
     @Provides
@@ -29,15 +33,18 @@ object AppModule{
 
     @Singleton
     @Provides
-    fun provideOkHttpClient() = run {
-        val loggingInterceptor = HttpLoggingInterceptor()
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+    fun providesHttpLoggingInterceptor()  = HttpLoggingInterceptor()
+        .apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
 
-
+    @Singleton
+    @Provides
+    fun provideOkHttpClient(httpLoggingInterceptor: HttpLoggingInterceptor)  :OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(httpLoggingInterceptor)
             .build()
-    }
+
 
     @Singleton
     @Provides
@@ -47,7 +54,7 @@ object AppModule{
         .client(okHttpClient)
         .build()
 
-
+    @Singleton
     @Provides
     fun getRoomDB(context: Context) : MovieDatabase
         = Room.databaseBuilder(
@@ -56,4 +63,11 @@ object AppModule{
             "movie_database"
         ).fallbackToDestructiveMigration().build()
 
+    @Singleton
+    @Provides
+    fun provideApiService(retrofit: Retrofit): ApiService = retrofit.create(ApiService::class.java)
+
+    @Singleton
+    @Provides
+    fun providesRepository(apiService: ApiService, movieDatabase: MovieDatabase) = Repository(apiService = apiService, movieDatabase = movieDatabase )
 }
